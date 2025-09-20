@@ -23,6 +23,8 @@ class NewsBot:
     def __init__(self, token, channel_id):
         self.bot = Bot(token=token)
         self.channel_id = channel_id
+        # Добавлено для логов
+        logger.info(f"🛡️ Канал для публикации: {self.channel_id}")
         self.conn = sqlite3.connect('news.db', check_same_thread=False)
         self.cursor = self.conn.cursor()
 
@@ -37,9 +39,9 @@ class NewsBot:
         """Обновляем структуру базы данных"""
         try:
             self.cursor.execute('''CREATE TABLE IF NOT EXISTS posted_news
-                                   (id TEXT PRIMARY KEY, 
+                                   (id TEXT PRIMARY KEY,
                                     title TEXT,
-                                    link TEXT UNIQUE,  
+                                    link TEXT UNIQUE,
                                     added_time TIMESTAMP)''')
             self.conn.commit()
             logger.info("✅ База данных инициализирована/обновлена")
@@ -391,40 +393,31 @@ class NewsScheduler:
             now = datetime.now()
             current_hour = now.hour
 
-            # Проверяем, находится ли текущее время в рабочем интервале
             if self.working_start_hour <= current_hour < self.working_end_hour:
 
-                # Если очередь пуста, запускаем проверку новостей
-                if not self.news_bot.news_queue:
-                    logger.info("📭 Очередь пуста. Запускаем проверку...")
-                    # Повторяем проверку, пока не найдем новости
-                    while not await self.news_bot.check_news():
-                        logger.info("😔 Новых новостей нет. Повторная проверка через 10 минут...")
-                        await asyncio.sleep(600)  # Ждем 10 минут
+                # Случайная задержка для первой публикации в этом часе (0-59 минут)
+                first_post_delay_minutes = random.randint(0, 59)
+                logger.info(f"⏳ Первая публикация запланирована через {first_post_delay_minutes} минут.")
+                await asyncio.sleep(first_post_delay_minutes * 60)
 
-                # Публикуем 2 новости
-                for i in range(2):
-                    logger.info(f"🎯 Начинаем публикацию новости #{i + 1}...")
+                # Публикуем первую новость
+                await self.publish_single_news(self.news_bot)
 
-                    if self.news_bot.news_queue:
-                        await self.news_bot.publish_news()
-                    else:
-                        logger.info("❌ Не удалось найти новости для публикации.")
-                        break  # Выходим из цикла публикации, если нет новостей
+                # Пауза между первой и второй публикацией (20-30 минут)
+                pause_between_posts = random.randint(20 * 60, 30 * 60)
+                logger.info(f"⏸️ Пауза перед второй публикацией: {pause_between_posts // 60} минут.")
+                await asyncio.sleep(pause_between_posts)
 
-                    # Пауза между публикациями (2-3 минуты)
-                    if i < 1:
-                        sleep_time = random.randint(120, 180)
-                        logger.info(f"⏸️ Пауза перед следующей публикацией на {sleep_time // 60} минут...")
-                        await asyncio.sleep(sleep_time)
+                # Публикуем вторую новость
+                await self.publish_single_news(self.news_bot)
 
                 # Ожидаем до начала следующего часа
                 now = datetime.now()
                 next_hour = now.replace(minute=0, second=0, microsecond=0) + timedelta(hours=1)
                 sleep_duration = (next_hour - now).total_seconds()
-                logger.info(
-                    f"⏳ Публикации за этот час завершены. Следующая серия начнется через {sleep_duration // 60:.0f} минут.")
+                logger.info(f"⏳ Ожидание до следующей серии публикаций: {sleep_duration // 60:.0f} минут.")
                 await asyncio.sleep(sleep_duration)
+
             else:
                 # В нерабочее время просто ждем до 09:00
                 logger.info("🌙 Нерабочее время. Ожидаем до 09:00...")
@@ -434,14 +427,26 @@ class NewsScheduler:
                     next_run_time += timedelta(days=1)
 
                 sleep_duration = (next_run_time - now).total_seconds()
-                logger.info(
-                    f"⏳ Ожидание: {sleep_duration // 3600:.0f} часов {(sleep_duration % 3600) // 60:.0f} минут.")
+                logger.info(f"⏳ Ожидание: {sleep_duration // 3600:.0f} часов {(sleep_duration % 3600) // 60:.0f} минут.")
                 await asyncio.sleep(sleep_duration)
+
+    async def publish_single_news(self, news_bot):
+        """Вспомогательный метод для публикации одной новости"""
+        if not news_bot.news_queue:
+            logger.info("📭 Очередь пуста. Запускаем проверку...")
+            await news_bot.check_news()
+            # Если после проверки все еще нет новостей, выходим
+            if not news_bot.news_queue:
+                logger.info("❌ Новых новостей не найдено.")
+                return
+
+        # Публикуем новость, если она есть
+        await news_bot.publish_news()
 
 
 # Конфигурация
 BOT_TOKEN = "8352655660:AAGLuE9ee_qNFimaYWHPdakCw_57kTIfAcI"
-CHANNEL_ID = -1002989870351
+CHANNEL_ID = -1002207248459
 
 
 async def main():
