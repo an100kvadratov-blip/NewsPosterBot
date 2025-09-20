@@ -414,7 +414,7 @@ class NewsScheduler:
 
                     # Пауза между публикациями (2-3 минуты)
                     if i < 1:
-                        sleep_time = random.randint(1200, 1800)
+                        sleep_time = random.randint(120, 180)
                         logger.info(f"⏸️ Пауза перед следующей публикацией на {sleep_time // 60} минут...")
                         await asyncio.sleep(sleep_time)
 
@@ -441,7 +441,7 @@ class NewsScheduler:
 
 # Конфигурация
 BOT_TOKEN = "8352655660:AAGLuE9ee_qNFimaYWHPdakCw_57kTIfAcI"
-CHANNEL_ID = -1002207248459
+CHANNEL_ID = -1002989870351
 
 
 async def main():
