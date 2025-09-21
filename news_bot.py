@@ -445,7 +445,7 @@ class NewsScheduler:
 
 
 # Конфигурация
-BOT_TOKEN = "8352655660:AAGLuE9ee_qNFimaYWHPdakCw_57kTIfAcI"
+BOT_TOKEN = os.environ.get("BOT_TOKEN")
 CHANNEL_ID = -1002207248459
 
 
