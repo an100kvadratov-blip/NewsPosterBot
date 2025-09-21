@@ -9,6 +9,7 @@ from datetime import datetime, timedelta
 import logging
 from telegram import Bot
 from telegram.error import TelegramError
+import os
 
 # Настройка логирования с временными метками
 logging.basicConfig(
@@ -445,6 +446,7 @@ class NewsScheduler:
 
 
 # Конфигурация
+import os
 BOT_TOKEN = os.environ.get("BOT_TOKEN")
 CHANNEL_ID = -1002207248459
 
